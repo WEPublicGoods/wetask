@@ -1,0 +1,13 @@
+package limit_keeper
+
+import (
+	"github.com/WEPublicGoods/wetask/pkg/eth/order"
+	"github.com/ethereum/go-ethereum/common"
+)
+
+type payload struct {
+	NetworkName                 string
+	AutomationCompatibleAddress common.Address
+	Keeper                      common.Address
+	LimitOrder                  order.LimitOrder
+}
