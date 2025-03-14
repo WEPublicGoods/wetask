@@ -32,7 +32,7 @@ func Handle(ctx context.Context, t *asynq.Task) error {
 	if !ok {
 		return fmt.Errorf("network %s is not support, %w", p.NetworkName, asynq.SkipRetry)
 	}
-	orderData, err := order.LimitOrderABI.Pack(p.LimitOrder)
+	orderData, err := order.LimitOrderExecuteInputABI.Pack(p.LimitOrder)
 	if err != nil {
 		return fmt.Errorf("pack order data %v error:%s, %w", p.LimitOrder, err.Error(), asynq.SkipRetry)
 	}

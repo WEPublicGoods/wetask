@@ -10,7 +10,7 @@ import (
 	"github.com/tinkler/moonmist/pkg/jsonz/cjson"
 )
 
-func NewNormalTask(networkName string, automationCompatibleAddr string, keeper string, order ethorder.LimitOrder) (*asynq.Task, error) {
+func NewNormalTask(networkName string, automationCompatibleAddr string, keeper string, order ethorder.LimitOrderExecuteInput) (*asynq.Task, error) {
 	if networkName == "" {
 		return nil, fmt.Errorf("network name cannot be empty")
 	}
@@ -29,21 +29,6 @@ func NewNormalTask(networkName string, automationCompatibleAddr string, keeper s
 	}
 	if order.AmountIn == nil {
 		return nil, fmt.Errorf("amountIn cannot be nil")
-	}
-	if order.AmountOut == nil {
-		return nil, fmt.Errorf("amountOut cannot be nil")
-	}
-	if order.OrderFee == nil {
-		return nil, fmt.Errorf("orderFee cannot be nil")
-	}
-	if order.Deadline == nil {
-		return nil, fmt.Errorf("deadline cannot be nil")
-	}
-	if order.RemainingAmountIn == nil {
-		return nil, fmt.Errorf("remainingAmountIn cannot be nil")
-	}
-	if order.FilledAmountOut == nil {
-		return nil, fmt.Errorf("filledAmountOut cannot be nil")
 	}
 
 	// Validate nested Order fields

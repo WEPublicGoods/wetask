@@ -9,5 +9,5 @@ type payload struct {
 	NetworkName                 string
 	AutomationCompatibleAddress common.Address
 	Keeper                      common.Address
-	LimitOrder                  order.LimitOrder
+	LimitOrder                  order.LimitOrderExecuteInput
 }
