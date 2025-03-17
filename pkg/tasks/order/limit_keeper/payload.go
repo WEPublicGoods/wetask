@@ -11,3 +11,10 @@ type payload struct {
 	Keeper                      common.Address
 	LimitOrder                  order.LimitOrderExecuteInput
 }
+
+type cancelPayload struct {
+	NetworkName                 string
+	AutomationCompatibleAddress common.Address
+	Keeper                      common.Address
+	Order                       order.Order
+}

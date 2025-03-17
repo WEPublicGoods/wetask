@@ -21,16 +21,9 @@ func NewNormalTask(networkName string, automationCompatibleAddr string, keeper s
 		return nil, fmt.Errorf("keeper address cannot be empty")
 	}
 	// Validate LimitOrder fields
-	if order.TokenIn == (common.Address{}) {
-		return nil, fmt.Errorf("tokenIn address cannot be empty")
-	}
-	if order.TokenOut == (common.Address{}) {
-		return nil, fmt.Errorf("tokenOut address cannot be empty")
-	}
 	if order.AmountIn == nil {
 		return nil, fmt.Errorf("amountIn cannot be nil")
 	}
-
 	// Validate nested Order fields
 	if order.Order.Account == (common.Address{}) {
 		return nil, fmt.Errorf("order account cannot be empty")
@@ -62,4 +55,36 @@ func NewNormalTask(networkName string, automationCompatibleAddr string, keeper s
 		return nil, err
 	}
 	return asynq.NewTask(tasks.ACT_LIMIT_ORDER, p, asynq.MaxRetry(5)), nil
+}
+
+func NewCancelTask(networkName string, automationCompatibleAddr string, keeper string, order ethorder.Order) (*asynq.Task, error) {
+	if networkName == "" {
+		return nil, fmt.Errorf("network name cannot be empty")
+	}
+	if automationCompatibleAddr == "" {
+		return nil, fmt.Errorf("automation compatible address cannot be empty")
+	}
+	if keeper == "" {
+		return nil, fmt.Errorf("keeper address cannot be empty")
+	}
+	// Validate nested Order fields
+	if order.Account == (common.Address{}) {
+		return nil, fmt.Errorf("order account cannot be empty")
+	}
+	if order.Index == nil {
+		return nil, fmt.Errorf("order index cannot be nil")
+	}
+	if order.OrderType == nil {
+		return nil, fmt.Errorf("order type cannot be nil")
+	}
+	p, err := cjson.Marshal(cancelPayload{
+		NetworkName:                 networkName,
+		AutomationCompatibleAddress: common.HexToAddress(automationCompatibleAddr),
+		Keeper:                      common.HexToAddress(keeper),
+		Order:                       order,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return asynq.NewTask(tasks.ACT_CANCEL_LIMIT_ORDER, p, asynq.MaxRetry(5)), nil
 }
