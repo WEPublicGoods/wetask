@@ -45,13 +45,23 @@ func NewNormalTask(networkName string, automationCompatibleAddr string, keeper s
 	if !common.IsHexAddress(keeper) {
 		return nil, fmt.Errorf("the address of keeper is invalid: %s", keeper)
 	}
-
-	p, err := cjson.Marshal(payload{
+	pl := &payload{
 		NetworkName:                 networkName,
 		AutomationCompatibleAddress: common.HexToAddress(automationCompatibleAddr),
 		Keeper:                      common.HexToAddress(keeper),
 		LimitOrder:                  order,
-	})
+	}
+	for _, opt := range opts {
+		switch opt := opt.(type) {
+		case basefeeWiggleMultiplierOption:
+			v := opt.Value().(big.Int)
+			if v.Cmp(big.NewInt(2)) < 0 {
+				return nil, fmt.Errorf("the basefee wiggle multiplier is less than 2")
+			}
+			pl.BasefeeWiggleMultiplier = &v
+		}
+	}
+	p, err := cjson.Marshal(pl)
 	if err != nil {
 		return nil, err
 	}

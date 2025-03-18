@@ -1,6 +1,8 @@
 package limit_keeper
 
 import (
+	"math/big"
+
 	"github.com/WEPublicGoods/wetask/pkg/eth/order"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -10,6 +12,7 @@ type payload struct {
 	AutomationCompatibleAddress common.Address
 	Keeper                      common.Address
 	LimitOrder                  order.LimitOrderExecuteInput
+	BasefeeWiggleMultiplier     *big.Int
 }
 
 type cancelPayload struct {

@@ -63,6 +63,28 @@ func Handle(ctx context.Context, t *asynq.Task) error {
 		if err != nil {
 			return fmt.Errorf("%s, %w", err.Error(), asynq.SkipRetry)
 		}
+		if p.BasefeeWiggleMultiplier != nil {
+			backend, err := client.GetClient(ctx)
+			if err != nil {
+				return err
+			}
+			head, err := backend.HeaderByNumber(ctx, nil)
+			if err != nil {
+				return err
+			}
+			if head.BaseFee == nil {
+				return fmt.Errorf("can not get BaseFee")
+			}
+			tip, err := backend.SuggestGasTipCap(ctx)
+			if err != nil {
+				return err
+			}
+			transactOpts.GasTipCap = tip
+			transactOpts.GasFeeCap = new(big.Int).Add(
+				transactOpts.GasTipCap,
+				new(big.Int).Mul(head.BaseFee, p.BasefeeWiggleMultiplier),
+			)
+		}
 		performTx, err := performUpkeep(ctx, client, transactOpts, p.AutomationCompatibleAddress, orderData)
 		if err != nil {
 			return err
