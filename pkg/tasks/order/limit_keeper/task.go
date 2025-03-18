@@ -2,6 +2,7 @@ package limit_keeper
 
 import (
 	"fmt"
+	"math/big"
 
 	ethorder "github.com/WEPublicGoods/wetask/pkg/eth/order"
 	"github.com/WEPublicGoods/wetask/pkg/tasks"
@@ -10,7 +11,7 @@ import (
 	"github.com/tinkler/moonmist/pkg/jsonz/cjson"
 )
 
-func NewNormalTask(networkName string, automationCompatibleAddr string, keeper string, order ethorder.LimitOrderExecuteInput) (*asynq.Task, error) {
+func NewNormalTask(networkName string, automationCompatibleAddr string, keeper string, order ethorder.LimitOrderExecuteInput, opts ...asynq.Option) (*asynq.Task, error) {
 	if networkName == "" {
 		return nil, fmt.Errorf("network name cannot be empty")
 	}
@@ -54,10 +55,10 @@ func NewNormalTask(networkName string, automationCompatibleAddr string, keeper s
 	if err != nil {
 		return nil, err
 	}
-	return asynq.NewTask(tasks.ACT_LIMIT_ORDER, p, asynq.MaxRetry(5)), nil
+	return asynq.NewTask(tasks.ACT_LIMIT_ORDER, p, append([]asynq.Option{asynq.MaxRetry(0)}, opts...)...), nil
 }
 
-func NewCancelTask(networkName string, automationCompatibleAddr string, keeper string, order ethorder.Order) (*asynq.Task, error) {
+func NewCancelTask(networkName string, automationCompatibleAddr string, keeper string, order ethorder.Order, opts ...asynq.Option) (*asynq.Task, error) {
 	if networkName == "" {
 		return nil, fmt.Errorf("network name cannot be empty")
 	}
@@ -77,6 +78,9 @@ func NewCancelTask(networkName string, automationCompatibleAddr string, keeper s
 	if order.OrderType == nil {
 		return nil, fmt.Errorf("order type cannot be nil")
 	}
+	if order.ExecuteFee == nil {
+		order.ExecuteFee = big.NewInt(0)
+	}
 	p, err := cjson.Marshal(cancelPayload{
 		NetworkName:                 networkName,
 		AutomationCompatibleAddress: common.HexToAddress(automationCompatibleAddr),
@@ -86,5 +90,5 @@ func NewCancelTask(networkName string, automationCompatibleAddr string, keeper s
 	if err != nil {
 		return nil, err
 	}
-	return asynq.NewTask(tasks.ACT_CANCEL_LIMIT_ORDER, p, asynq.MaxRetry(5)), nil
+	return asynq.NewTask(tasks.ACT_CANCEL_LIMIT_ORDER, p, append([]asynq.Option{asynq.MaxRetry(5)}, opts...)...), nil
 }
