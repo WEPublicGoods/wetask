@@ -81,10 +81,18 @@ func Handle(ctx context.Context, t *asynq.Task) error {
 				return err
 			}
 			transactOpts.GasTipCap = tip
-			transactOpts.GasFeeCap = new(big.Int).Add(
-				transactOpts.GasTipCap,
-				new(big.Int).Mul(head.BaseFee, p.BasefeeWiggleMultiplier),
-			)
+			if p.BasefeeWiggleMultiplier != nil {
+				transactOpts.GasFeeCap = new(big.Int).Add(
+					transactOpts.GasTipCap,
+					new(big.Int).Mul(head.BaseFee, p.BasefeeWiggleMultiplier),
+				)
+			} else {
+				transactOpts.GasFeeCap = new(big.Int).Add(
+					transactOpts.GasTipCap,
+					new(big.Int).Mul(head.BaseFee, big.NewInt(2)),
+				)
+			}
+
 			if p.GasLimitMultiplier > 0 {
 				parsed, err := com.AutomationCompatibleMetaData.GetAbi()
 				if err != nil {
