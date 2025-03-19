@@ -10,6 +10,7 @@ import (
 	"github.com/WEPublicGoods/wetask/pkg/eth/eclient"
 	"github.com/WEPublicGoods/wetask/pkg/eth/order"
 	"github.com/WEPublicGoods/wetask/pkg/pool"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -63,7 +64,7 @@ func Handle(ctx context.Context, t *asynq.Task) error {
 		if err != nil {
 			return fmt.Errorf("%s, %w", err.Error(), asynq.SkipRetry)
 		}
-		if p.BasefeeWiggleMultiplier != nil {
+		if p.BasefeeWiggleMultiplier != nil || p.GasLimitMultiplier > 0 {
 			backend, err := client.GetClient(ctx)
 			if err != nil {
 				return err
@@ -84,7 +85,32 @@ func Handle(ctx context.Context, t *asynq.Task) error {
 				transactOpts.GasTipCap,
 				new(big.Int).Mul(head.BaseFee, p.BasefeeWiggleMultiplier),
 			)
+			if p.GasLimitMultiplier > 0 {
+				parsed, err := com.AutomationCompatibleMetaData.GetAbi()
+				if err != nil {
+					return err
+				}
+				input, err := parsed.Pack("performUpkeep", orderData)
+				if err != nil {
+					return err
+				}
+				msg := ethereum.CallMsg{
+					From:      transactOpts.From,
+					To:        &p.AutomationCompatibleAddress,
+					GasPrice:  nil,
+					GasTipCap: transactOpts.GasTipCap,
+					GasFeeCap: transactOpts.GasFeeCap,
+					Value:     transactOpts.Value,
+					Data:      input,
+				}
+				gasLimit, err := backend.EstimateGas(ctx, msg)
+				if err != nil {
+					return err
+				}
+				transactOpts.GasLimit = uint64(float64(gasLimit) * p.GasLimitMultiplier)
+			}
 		}
+
 		performTx, err := performUpkeep(ctx, client, transactOpts, p.AutomationCompatibleAddress, orderData)
 		if err != nil {
 			return err

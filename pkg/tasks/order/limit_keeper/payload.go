@@ -13,6 +13,7 @@ type payload struct {
 	Keeper                      common.Address
 	LimitOrder                  order.LimitOrderExecuteInput
 	BasefeeWiggleMultiplier     *big.Int
+	GasLimitMultiplier          float64
 }
 
 type cancelPayload struct {

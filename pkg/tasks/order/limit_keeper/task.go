@@ -59,6 +59,12 @@ func NewNormalTask(networkName string, automationCompatibleAddr string, keeper s
 				return nil, fmt.Errorf("the basefee wiggle multiplier is less than 2")
 			}
 			pl.BasefeeWiggleMultiplier = &v
+		case gasLimitMultiplierOption:
+			v := opt.Value().(float64)
+			if v <= 0 {
+				return nil, fmt.Errorf("the gaslimit multiplier require positive")
+			}
+			pl.GasLimitMultiplier = v
 		}
 	}
 	p, err := cjson.Marshal(pl)

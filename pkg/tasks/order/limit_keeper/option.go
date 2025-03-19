@@ -9,6 +9,7 @@ import (
 
 type (
 	basefeeWiggleMultiplierOption big.Int
+	gasLimitMultiplierOption      float64
 )
 
 func (n basefeeWiggleMultiplierOption) String() string {
@@ -25,4 +26,20 @@ func BasefeeWiggleMultiplier(n *big.Int) asynq.Option {
 		n = big.NewInt(2)
 	}
 	return basefeeWiggleMultiplierOption(*n)
+}
+
+func (n gasLimitMultiplierOption) String() string {
+	return fmt.Sprintf("GasLimitMultiplier(%f)", float64(n))
+}
+
+func (n gasLimitMultiplierOption) Type() asynq.OptionType { return asynq.OptionType(11) }
+
+func (n gasLimitMultiplierOption) Value() interface{} { return float64(n) }
+
+// default gas limit multiplier is 1.0
+func GasLimitMultiplier(n float64) asynq.Option {
+	if n == 0 {
+		n = 1.0
+	}
+	return gasLimitMultiplierOption(n)
 }
