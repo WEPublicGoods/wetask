@@ -22,6 +22,7 @@ type Ethclient interface {
 	Network() string
 	GetClient(ctx context.Context) (bind.ContractBackend, error)
 	WaitForReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error)
+	UrgeReceipt(ctx context.Context, send func() (common.Hash, error), maxIncreaseTimes int) (*types.Receipt, error)
 }
 
 type EthclientPool struct {
@@ -78,6 +79,41 @@ func (cli *EthclientPool) WaitForReceipt(ctx context.Context, txHash common.Hash
 			if err == ethereum.NotFound {
 				if ctx.Err() == nil {
 					time.Sleep(1 * time.Second)
+					continue
+				} else {
+					return nil, ctx.Err()
+				}
+			}
+			return nil, err
+		}
+		if receipt != nil && receipt.Status == types.ReceiptStatusFailed {
+			return nil, fmt.Errorf("transaction %s failed, %w", txHash.Hex(), asynq.SkipRetry)
+		}
+		if receipt != nil && receipt.BlockNumber.Cmp(big.NewInt(0)) > 0 {
+			return receipt, nil
+		}
+	}
+}
+
+func (cli *EthclientPool) UrgeReceipt(ctx context.Context, send func() (common.Hash, error), maxIncreaseTimes int) (*types.Receipt, error) {
+	c, err := cli.getRawClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for {
+		txHash, err := send()
+		if err != nil {
+			return nil, err
+		}
+		receipt, err := c.TransactionReceipt(ctx, txHash)
+		if err != nil {
+			if err == ethereum.NotFound {
+				if ctx.Err() == nil {
+					time.Sleep(1 * time.Second)
+					if maxIncreaseTimes == 0 {
+						return nil, fmt.Errorf("%s failed after %d times to increase gas", maxIncreaseTimes, asynq.SkipRetry)
+					}
+					maxIncreaseTimes--
 					continue
 				} else {
 					return nil, ctx.Err()
