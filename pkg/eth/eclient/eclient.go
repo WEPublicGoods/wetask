@@ -111,7 +111,7 @@ func (cli *EthclientPool) UrgeReceipt(ctx context.Context, send func() (common.H
 				if ctx.Err() == nil {
 					time.Sleep(1 * time.Second)
 					if maxIncreaseTimes == 0 {
-						return nil, fmt.Errorf("%s failed after %d times to increase gas", maxIncreaseTimes, asynq.SkipRetry)
+						return nil, fmt.Errorf("failed after %d times to increase gas, %w", maxIncreaseTimes, asynq.SkipRetry)
 					}
 					maxIncreaseTimes--
 					continue

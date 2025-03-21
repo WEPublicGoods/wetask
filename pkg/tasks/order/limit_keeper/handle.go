@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"math/big"
 	"sync"
 
@@ -220,23 +219,10 @@ func (oe *OptimizeExecutor) Handle(ctx context.Context, t *asynq.Task) error {
 		if err != nil {
 			return err
 		}
-		msg := ethereum.CallMsg{
-			From:      transactOpts.From,
-			To:        &p.AutomationCompatibleAddress,
-			GasPrice:  nil,
-			GasTipCap: transactOpts.GasTipCap,
-			GasFeeCap: transactOpts.GasFeeCap,
-			Value:     transactOpts.Value,
-			Data:      input,
-		}
-		gasLimit, err := backend.EstimateGas(ctx, msg)
-		if err != nil {
-			return err
-		}
 
 		multiplier := float64(1)
 		send := func() (common.Hash, error) {
-			transactOpts.GasLimit = increaseGasLimit(gasLimit, multiplier)
+			increaseGas(ctx, backend, &p.AutomationCompatibleAddress, transactOpts, input, multiplier)
 			multiplier += 0.1 // next increase with 10%
 			performTx, err := performUpkeep(ctx, client, transactOpts, p.AutomationCompatibleAddress, orderData)
 			if err != nil {
@@ -315,23 +301,10 @@ func (oe *OptimizeExecutor) HandleCancel(ctx context.Context, t *asynq.Task) err
 		if err != nil {
 			return err
 		}
-		msg := ethereum.CallMsg{
-			From:      transactOpts.From,
-			To:        &p.AutomationCompatibleAddress,
-			GasPrice:  nil,
-			GasTipCap: transactOpts.GasTipCap,
-			GasFeeCap: transactOpts.GasFeeCap,
-			Value:     transactOpts.Value,
-			Data:      input,
-		}
-		gasLimit, err := backend.EstimateGas(ctx, msg)
-		if err != nil {
-			return err
-		}
 
 		multiplier := float64(1)
 		send := func() (common.Hash, error) {
-			transactOpts.GasLimit = increaseGasLimit(gasLimit, multiplier)
+			increaseGas(ctx, backend, &p.AutomationCompatibleAddress, transactOpts, input, multiplier)
 			multiplier += 0.1 // next increase with 10%
 			performTx, err := performUpkeep(ctx, client, transactOpts, p.AutomationCompatibleAddress, orderData)
 			if err != nil {
@@ -345,8 +318,32 @@ func (oe *OptimizeExecutor) HandleCancel(ctx context.Context, t *asynq.Task) err
 	return nil
 }
 
-func increaseGasLimit(gasLimit uint64, multiplier float64) uint64 {
-	return uint64(math.Floor(float64(gasLimit) * multiplier))
+func increaseGas(ctx context.Context, backend bind.ContractBackend, automationCompatibleAddress *common.Address, transactOpts *bind.TransactOpts, input []byte, multiplier float64) error {
+	if transactOpts.GasFeeCap == nil {
+		return nil
+	}
+
+	gasFeeCap := transactOpts.GasFeeCap
+	multiplierBig := new(big.Float).SetFloat64(multiplier)
+	gasFeeCapFloat := new(big.Float).SetInt(gasFeeCap)
+	gasFeeCapFloat = gasFeeCapFloat.Mul(gasFeeCapFloat, multiplierBig)
+	gasFeeCap, _ = gasFeeCapFloat.Int(nil)
+	msg := ethereum.CallMsg{
+		From:      transactOpts.From,
+		To:        automationCompatibleAddress,
+		GasPrice:  nil,
+		GasTipCap: transactOpts.GasTipCap,
+		GasFeeCap: gasFeeCap,
+		Value:     transactOpts.Value,
+		Data:      input,
+	}
+	gasLimit, err := backend.EstimateGas(ctx, msg)
+	if err != nil {
+		return err
+	}
+	transactOpts.GasFeeCap = gasFeeCap
+	transactOpts.GasLimit = gasLimit
+	return nil
 }
 
 func parseCancelPayloadFrom(t *asynq.Task) (*cancelPayload, error) {
